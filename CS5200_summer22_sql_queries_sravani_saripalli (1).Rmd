@@ -1,0 +1,107 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(RSQLite)
+
+fpath = "/Users/sravanisaripalli/Downloads/databases/"
+db_file = "MediaDB.sqlite"
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+db <- dbConnect(RSQLite::SQLite(), paste0(fpath,db_file))
+```
+
+```{sql connection=db}
+select name from sqlite_schema where type='table' order by name;
+```
+#Question 1
+
+```{sql connection=db}
+select DISTINCT lastname,city,state from customers c inner join invoices i 
+where c.CustomerId=i.CustomerId;
+```
+#Question2
+
+```{sql connection=db}
+select title,count(trackid) as Number_of_tracks from albums a
+inner join tracks t where a.AlbumId=t.AlbumId group by a.Title,t.AlbumId  ;
+```
+
+#Question3
+
+```{sql connection=db}
+select m.name,count(t.trackid) from tracks t
+inner join media_types m 
+where t.mediatypeid=m.MediaTypeId
+group by t.mediatypeid;
+```
+
+#Question 4
+
+```{sql connection=db}
+SELECT avg(strftime('%Y', date())-strftime('%Y', birthdate)) as AvgAge from employees;
+```
+
+#Question 5
+
+```{sql connection=db}
+SELECT distinct state,count(c.customerid) as count_of_customers from customers c
+inner join invoices i where c.CustomerId=i.CustomerId and state not NULL
+group by c.state;
+```
+
+#Question 6
+
+```{sql connection=db}
+select count(customerid) from customers where customerid
+not in(select i.customerid from invoices i);
+```
+
+#Question 7
+
+```{sql connection=db}
+select count(title) as count_symphony from albums where title like "%symphony%";
+```
+
+#Question 8
+
+```{sql connection=db}
+select at.name,round((sum(milliseconds)/(1000*60*60.0)),2) as hours from tracks t 
+inner join albums a on t.AlbumId=a.AlbumId inner join artists at 
+on a.ArtistId=at.ArtistId
+GROUP by at.name;
+```
+
+#Question 9
+
+```{sql connection=db}
+select name,count_tracks from
+(select at.name,count(t.trackid) as count_tracks from tracks t inner JOIN
+ albums a on a.albumid=t.albumid inner JOIN
+ artists at on at.ArtistId=a.ArtistId GROUP by at.ArtistId) where count_tracks=
+ (select max(count_tracks) from (select at.name,count(t.TrackId) as count_tracks FROM
+   tracks t inner join albums a on a.albumid=t.albumid inner JOIN
+ artists at on at.ArtistId=a.ArtistId GROUP by at.ArtistId));
+```
+
+#Question 10
+
+```{sql connection=db}
+select distinct name,count_genres from 
+(select name,count_genres from 
+ (select at.name ,count(t.genreid) as count_genres from tracks t  inner join albums a ON
+  t.albumid=a.AlbumId inner join artists at on at.artistid=a.ArtistId group by at.artistid))
+  where count_genres>3 order by name;
+```
+
+
+
+
+
+
+
+
+
+

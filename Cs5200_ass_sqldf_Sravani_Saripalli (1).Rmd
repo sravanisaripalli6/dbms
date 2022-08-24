@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#install.packages("sqldf")
+library(sqldf)
+```
+
+#Question 1
+
+```{r}
+library(RSQLite)
+
+# connect to the SQLite database in the specified file
+db.conn <- dbConnect(SQLite(), dbname="/Users/sravanisaripalli/Downloads/databases/MediaDB.sqlite")
+
+# construct a SQL query
+sqlCmd = "select * from invoice_items"
+
+# send the SQL query to the database
+rs = dbGetQuery(db.conn, sqlCmd)
+
+new <- rs$UnitPrice*rs$Quantity
+
+#add column called 'new'
+rs$ExtPrice <- new
+# Mean of ExtPrice
+round(mean(rs$ExtPrice),2)
+```
+```{r}
+head(rs,5)
+```
+
+#Question 2
+
+```{r}
+library(sqldf)
+df<-sqldf("select invoiceid,sum(ExtPrice) as Total,count(InvoiceId) as Number_of_items from rs group by Invoiceid")
+df
+```
+#Question 3
+
+```{r}
+plot(df$Number_of_items,df$Total,xlab = "Number of items",ylab = "Total",main="Number of items vs total",col="Blue")
+```
+#Question 5
+```{r}
+#sqlCmd = "select * from sqlite_schema where type=\'table\'"
+rs = dbGetQuery(db.conn, sqlCmd)
+discPrice <-data.frame(matrix(ncol=2))
+cols <- c('invoiceid','discprice')
+colnames(discPrice)<-cols
+
+for(row in 1:nrow(df)){
+  numOfitems <- df[row,'Number_of_items']
+  if(numOfitems > 5){
+    discPrice[row,'invoiceid'] = df[row,'InvoiceId']
+    discPrice[row,'discprice'] = 0.9 * df[row,'Total']
+  }
+  else {
+    discPrice[row,'invoiceid'] = df[row,'InvoiceId']
+    discPrice[row,'discprice']<- NA
+  }
+}
+```
+
+```{r}
+dbWriteTable(db.conn,"temp_table",discPrice)
+```
+
+```{r}
+dbExecute(db.conn,'ALTER TABLE invoices add DiscPrice REAL')
+```
+
+
+```{r}
+dbExecute(db.conn,'UPDATE invoices SET discprice = (SELECT temp_table.discprice FROM temp_table WHERE temp_table.invoiceid=invoices.InvoiceId ) WHERE EXISTS ( SELECT * FROM temp_table WHERE temp_table.invoiceid = invoices.InvoiceId)')
+```
+
+#Question 6
+
+```{r}
+sqlCmd = "select InvoiceId,Total, DiscPrice from invoices where discprice is not null limit 10"
+
+# send the SQL query to the database
+values = dbGetQuery(db.conn, sqlCmd)
+values
+```
+#Dropping temp_table
+```{r}
+dbExecute(db.conn,'drop table temp_table')
+```
+
+
+
+
+

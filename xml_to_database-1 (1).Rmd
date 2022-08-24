@@ -1,0 +1,96 @@
+---
+title: "Store XML in a Database"
+output: html_notebook
+---
+The given data is already in normalized form as:
+1. There is no multi-valued attributes so it is in first normal form.
+2. It does not contain any partial dependencies so it is in second normal form.
+3. There is no transitive dependency for non-prime attributes so it is in third normal form.
+4. It is in BCNF as non-trivial non-functional dependency is a super key.
+So we create an ERD diagram for the given data as follows:
+
+
+```{r}
+knitr::include_graphics("https://imgur.com/h0oRulk.png")
+```
+
+```{r}
+df<- read_xml('Books-v3.xml')
+books<-xml_find_all(df, xpath = "//catalog/book")
+book_id <- xml_attr(books, "id")
+```
+
+```{r}
+library(lubridate)
+# Load the package required to read XML files.
+library(XML)
+# Also load the other required package.
+library("methods")
+# LOADING TRANSFORMED XML INTO R DATA FRAME
+doc<-xmlParse("Books-v3.xml")
+xmldf <- xmlToDataFrame(nodes = getNodeSet(doc, "//book"))
+xmldf$book_id<-book_id 
+xmldf$price<-as.numeric(xmldf$price)
+```
+
+
+```{r}
+xmldf<-select(xmldf,book_id, author, title, genre,price,publish_date,description)
+```
+
+
+```{r}
+library(RSQLite)
+
+fpath = "/Users/sravanisaripalli/Downloads/databases/"
+db_file = "xml.sqlite"
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+db <- dbConnect(RSQLite::SQLite(), paste0(fpath,db_file))
+```
+
+```{sql connection=db}
+create table if not exists Book(
+id text primary key,author text,title 
+text,genre text,price double,
+publish_date date,description text)
+```
+
+```{r}
+dbWriteTable(db, "Book", xmldf, overwrite = T)
+```
+
+```{sql connection=db}
+select * from Book limit 3;
+```
+
+# What is the number of genres have at least three books?
+
+```{sql connection=db}
+select count(*) as number_of_genres from(select * from Book group by genre having count(*)>=3)
+```
+# What is the oldest year in which a publication was published?
+
+```{sql connection=db}
+select substr(publish_date,1,4) as oldest_year from Book order by publish_date asc limit 1;
+```
+
+# Find the number of books and average price for each genre.
+
+```{sql connection=db}
+select genre,count(book_id) as number_of_books,
+avg(price) as average_price from Book group by genre;
+```
+
+# List the title and author of all books that are less than 0.8*AVG or more than 1.2*AVG, where AVG is the average price of all books.
+
+```{sql connection=db}
+select title,author from Book where price<
+(select avg(price)*0.8 from Book) or price>(select avg(price)*1.2  from Book); 
+```
+
+```{sql connection=db}
+drop table Book;
+```
+
+

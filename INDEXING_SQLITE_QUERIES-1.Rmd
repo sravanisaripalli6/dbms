@@ -1,0 +1,176 @@
+---
+title: "SQL_Indexing"
+author: "Sravani Saripalli"
+date: '2022-07-13'
+output: html_document
+---
+
+```{r}
+library(RSQLite)
+
+fpath = "/Users/sravanisaripalli/Downloads/databases/"
+db_file = "sakila.sqlite"
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+db <- dbConnect(RSQLite::SQLite(), paste0(fpath,db_file))
+```
+
+```{r}
+mydb = dbConnect(RMySQL::MySQL(),
+                            dbname='sakila',
+                            host='localhost',
+                            port=3306,
+                            user='admin',
+                            password='admin')
+```
+
+```{sql connection=db}
+select name from sqlite_schema where type='table' order by name;
+```
+```{sql connection=db}
+PRAGMA index_list('CUSTOMER');
+```
+Query on a single table with a WHERE clause that is not the primary key but has an index; same query but no index on that column
+
+#Quering without adding index
+
+SQLite
+```{r}
+dbGetQuery(db, "EXPLAIN QUERY PLAN select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+start_time <- Sys.time()
+dbGetQuery(db, "select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+MySQL
+```{r}
+dbGetQuery(mydb, "EXPLAIN select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+start_time <- Sys.time()
+dbGetQuery(mydb, "select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+
+```{sql connection=db}
+CREATE INDEX cust_ln ON CUSTOMER(last_name);
+```
+
+```{r}
+dbSendStatement(mydb,"CREATE INDEX cust_ln ON CUSTOMER(last_name)")
+dbSendStatement(db,"CREATE INDEX cust_ln ON CUSTOMER(last_name)")
+```
+
+
+Running the queries with index.
+```{r}
+dbGetQuery(mydb,"EXPLAIN select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+start_time <- Sys.time()
+dbGetQuery(mydb,"select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+
+```{r}
+dbGetQuery(db,"EXPLAIN QUERY PLAN select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+start_time <- Sys.time()
+dbGetQuery(db,"select first_name,last_name FROM CUSTOMER WHERE last_name='WILLIAMS'")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+
+```{sql connection=db}
+DROP INDEX cust_ln;
+```
+
+2. query with a join on at least three tables (no secondary indexes; no where clause other than join clause)
+
+The below query is for finding the customer's address and city
+
+```{r}
+dbGetQuery(mydb,"EXPLAIN select C.first_name,C.last_name,A.ADDRESS,CI.CITY from CUSTOMER C INNER JOIN ADDRESS A ON C.address_id=A.address_id 
+           inner join CITY CI ON A.city_id=CI.city_id LIMIT 10")
+start_time <- Sys.time()
+dbGetQuery(mydb,"select C.first_name,C.last_name,A.ADDRESS,CI.CITY from CUSTOMER C INNER JOIN ADDRESS A ON C.address_id=A.address_id 
+inner join CITY CI ON A.city_id=CI.city_id LIMIT 10")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+
+
+Similarly for sqlite
+```{r}
+dbGetQuery(db,"EXPLAIN QUERY PLAN select C.first_name,C.last_name,A.ADDRESS,CI.CITY from CUSTOMER C INNER JOIN ADDRESS A ON C.address_id=A.address_id inner join CITY CI ON A.city_id=CI.city_id LIMIT 10")
+start_time <- Sys.time()
+dbGetQuery(db,"select C.first_name,C.last_name,A.ADDRESS,CI.CITY from CUSTOMER C INNER JOIN ADDRESS A ON C.address_id=A.address_id inner join CITY CI ON A.city_id=CI.city_id LIMIT 10")
+end_time <- Sys.time()
+print(paste("time required:",(end_time-start_time)))
+```
+
+3. query on a single table with group by having a where clause that involves only the primary key column
+
+Here I'm counting the number of actors with same last name by their primary key whith where condition that the actor_id is between 100 and 200.
+
+```{r}
+dbGetQuery(mydb, "explain select last_name, count(actor_id) actor_count 
+from actor where actor_id <200 and actor_id>100 
+group by last_name
+order by actor_count desc, last_name")
+start_time <- Sys.time()
+dbGetQuery(mydb, "select last_name, count(actor_id) actor_count 
+from actor where actor_id <200 and actor_id>100 
+group by last_name
+order by actor_count desc, last_name")
+end_time <- Sys.time()
+print(paste0("time required:",(end_time-start_time)))
+```
+
+
+```{r}
+dbGetQuery(db, "select last_name, count(actor_id) actor_count 
+from actor where actor_id <200 and actor_id>100 
+group by last_name
+order by actor_count desc, last_name")
+start_time <- Sys.time()
+dbGetQuery(db, "select last_name, count(actor_id) actor_count 
+from actor where actor_id <200 and actor_id>100 
+group by last_name
+order by actor_count desc, last_name")
+end_time <- Sys.time()
+print(paste0("time required:",(end_time-start_time)))
+```
+
+4.one additional experiment of your choice: any query, any index use -- be creative and investigate
+
+trying like operator
+```{sql connection=db}
+select DISTINCT C.first_name,C.last_name from CUSTOMER C inner join RENTAL R ON C.customer_id=R.customer_id 
+INNER JOIN PAYMENT P ON P.rental_id=R.rental_id AND C.first_name LIKE 'MAR%';
+```
+
+Here I'm counting the number times Mary has taken rentals and has paid for it.
+
+```{r}
+dbGetQuery(mydb, "explain select count(C.customer_id) no_of_rentals from CUSTOMER C inner join RENTAL R ON C.customer_id=R.customer_id 
+INNER JOIN PAYMENT P ON P.rental_id=R.rental_id AND C.first_name='MARY'")
+start_time <- Sys.time()
+dbGetQuery(mydb, "select count(C.customer_id) no_of_rentals from CUSTOMER C inner join RENTAL R ON C.customer_id=R.customer_id 
+INNER JOIN PAYMENT P ON P.rental_id=R.rental_id AND C.first_name='MARY'")
+end_time <- Sys.time()
+print(paste0("time required:",(end_time-start_time)))
+```
+
+
+```{r}
+dbGetQuery(db, "select count(C.customer_id) no_of_rentals from CUSTOMER C inner join RENTAL R ON C.customer_id=R.customer_id 
+INNER JOIN PAYMENT P ON P.rental_id=R.rental_id AND C.first_name='MARY'")
+start_time <- Sys.time()
+dbGetQuery(db, "select count(C.customer_id) no_of_rentals from CUSTOMER C inner join RENTAL R ON C.customer_id=R.customer_id 
+INNER JOIN PAYMENT P ON P.rental_id=R.rental_id AND C.first_name='MARY'")
+end_time <- Sys.time()
+print(paste0("time required:",(end_time-start_time)))
+```
+
+
+
+
+

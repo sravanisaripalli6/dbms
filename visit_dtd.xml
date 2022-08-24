@@ -1,0 +1,19 @@
+<!DOCTYPE log [
+
+<!ELEMENT log (visit+,page+,visitor+)>
+
+<!ELEMENT visit (vdate, vtime)>
+<!ATTLIST visit tid CDATA #REQUIRED>
+<!ATTLIST visit pid CDATA #REQUIRED>
+<!ATTLIST visit vid CDATA #REQUIRED>
+<!ELEMENT visitdate (#PCDATA) >
+<!ELEMENT visittime (#PCDATA) >
+
+<!ELEMENT page (url)>
+<!ATTLIST page pid CDATA #REQUIRED>
+<!ELEMENT url (#PCDATA)>
+
+<!ELEMENT visitor (ip)>
+<!ATTLIST visitor vid CDATA #REQUIRED >
+<!ELEMENT ip (#PCDATA) >
+]>

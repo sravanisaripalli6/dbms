@@ -1,0 +1,28 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(lubridate)
+# Load the package required to read XML files.
+library(XML)
+# Also load the other required package.
+library("methods")
+# LOADING TRANSFORMED XML INTO R DATA FRAME
+doc<-xmlParse("visitlogs.xml")
+```
+
+
+```{r}
+tids <- xpathSApply(data, "//visit", xmlGetAttr, "tid")
+pids <- xpathSApply(data, "//visit", xmlGetAttr, "pid")
+vids <- xpathSApply(data, "//visit", xmlGetAttr, "vid")
+```
+Total number of visits for a page
+```{r}
+no_of_visits <- xpathSApply(data,"count(//visit[@pid=11])")
+print(no_of_visits)
+```
+
+

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE log [
+
+<!ELEMENT log (visit+,page+,visitor+)>
+
+<!ELEMENT visit (vdate, vtime)>
+<!ATTLIST visit tid CDATA #REQUIRED>
+<!ATTLIST visit pid CDATA #REQUIRED>
+<!ATTLIST visit vid CDATA #REQUIRED>
+<!ELEMENT visitdate (#PCDATA) >
+<!ELEMENT visittime (#PCDATA) >
+
+<!ELEMENT page (url)>
+<!ATTLIST page pid CDATA #REQUIRED>
+<!ELEMENT url (#PCDATA)>
+
+<!ELEMENT visitor (ip)>
+<!ATTLIST visitor vid CDATA #REQUIRED >
+<!ELEMENT ip (#PCDATA) >
+]>
+
+<log>
+    <!--visits-->
+    <visit tid = "1" pid="1" vid="21">
+        <visitdate>"12-12-12"</visitdate>
+        <visittime>"08:00"</visittime>
+    </visit>
+    <!--new entry-->
+    <visit tid = "2" pid="11" vid="22">
+        <visitdate>"12-11-12"</visitdate>
+        <visittime>"10:00"</visittime>
+    </visit>
+      <!--new entry-->
+        <visit tid = "3" pid="111" vid="23">
+        <visitdate>"11-01-12"</visitdate>
+        <visittime>"22:30"</visittime>
+    </visit>
+    
+
+    <!--Page-->
+    <page pid = "1">
+        <url>"https://jsonformatter.org/xml-editor"</url>
+    </page>
+    <!--new entry-->
+    <page pid = "11">
+        <url>"https://machow2.com/notepad-for-mac/"</url>
+    </page>
+    <!--new entry-->
+    <page pid = "111">
+        <url>"https://www.work.com/worker?123"</url>
+    </page>
+    
+    <!--visitor-->
+    <visitor vid = "21">
+        <ip>"255.255.255:255"</ip>
+    </visitor>
+    <!--new entry-->
+    <visitor vid = "22">
+        <ip>"255.255.215:251"</ip>
+    </visitor>
+    <!--new entry-->
+    <visitor vid = "23">
+        <ip>"255.255.225:251"</ip>
+    </visitor>
+</log>

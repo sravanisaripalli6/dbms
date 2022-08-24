@@ -1,0 +1,177 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(RSQLite)
+
+fpath = "/Users/sravanisaripalli/Downloads/databases"
+dbfile = "committeeDB.sqlite"
+
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(fpath,dbfile))
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Course;
+```
+
+```{sql connection=dbcon}
+CREATE TABLE Course(
+  number TEXT NOT NULL,
+  title TEXT NOT NULL,
+  lengthInDays NUMBER NOT NULL,
+  PRIMARY KEY (number)
+)
+```
+
+#testing table by inserting data
+```{sql connection=dbcon}
+INSERT INTO Course (number,title,lengthInDays) VALUES 
+  (100,"DBMS",90),
+  (200,"Data Science",90);
+```
+
+```{sql connection=dbcon}
+select * from Course;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Unit;
+```
+
+```{sql connection=dbcon}
+CREATE TABLE Unit(
+  number TEXT NOT NULL,
+  tid NUMBER NOT NULL,
+  PRIMARY KEY(number,tid)
+  FOREIGN KEY (number) REFERENCES Course(number)
+  FOREIGN KEY (tid) REFERENCES Lesson(tid)
+)
+```
+
+#testing table by inserting data
+```{sql connection=dbcon}
+INSERT INTO Unit (number,tid) VALUES 
+  (100,1001),
+  (200,1002);
+```
+
+```{sql connection=dbcon}
+select * from Unit;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Lesson;
+```
+
+```{sql connection=dbcon}
+CREATE TABLE Lesson(
+  tid NUMBER NOT NULL,
+  title TEXT NOT NULL,
+  lengthInHrs NUMBER NOT NULL,
+  subject_id Number NOT NULL,
+  PRIMARY KEY (tid),
+  FOREIGN KEY (subject_id) REFERENCES subject(subject_id)
+)
+```
+
+#testing table by inserting data
+```{sql connection=dbcon}
+INSERT INTO Lesson (tid,title,lengthInHrs,subject_id) VALUES 
+  (1001,"Quering with SQL",240,1),
+  (1002,"Machine Learning",320,2);
+```
+
+```{sql connection=dbcon}
+select * from Lesson;
+```
+```{sql connection=dbcon}
+CREATE TABLE subject (
+    subject_id integer primary key AUTOINCREMENT,
+    subject_name Text Not null unique
+    );
+```
+#insering values into subject table
+```{sql connection=dbcon}
+INSERT INTO subject (subject_name) VALUES 
+('ML'),('SQL'),('R'),('JAVA');
+```
+
+```{sql connection=dbcon}
+select * from subject;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS subject;
+```
+
+
+```{sql connection=dbcon}
+CREATE TRIGGER subject_not_in_list 
+   BEFORE INSERT ON Lesson
+BEGIN
+   SELECT
+      CASE
+	WHEN NEW.subject_id NOT in (1,2,3,4) THEN
+   	  RAISE (ABORT,'Invalid subject_id')
+       END;
+END;
+```
+
+```{sql connection=dbcon}
+DROP TRIGGER IF EXISTS subject_not_in_list;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Course_logs;
+```
+
+```{sql connection=dbcon}
+CREATE TABLE course_logs(old_number TEXT NOT NULL,
+  old_title TEXT NOT NULL,
+  old_lengthInDays NUMBER NOT NULL,
+  new_lengthInDays NUMBER NOT NULL,
+  created_at text,
+  PRIMARY KEY (old_number));
+```
+
+
+```{sql connection=dbcon}
+CREATE TRIGGER log_number_of_days_after_update 
+   AFTER UPDATE ON Course
+   WHEN old.lengthInDays <> new.lengthInDays
+BEGIN
+	INSERT INTO Course_logs (old_number,old_title,old_lengthInDays,new_lengthInDays,created_at)
+VALUES(old.number,old.title,old.lengthInDays,new.lengthInDays,date('now')) ;
+END;
+```
+
+
+```{sql connection=dbcon}
+DROP TRIGGER IF EXISTS log_number_of_days_after_update;
+```
+
+```{sql connection=dbcon}
+UPDATE course
+SET 
+   lengthInDays = 110
+WHERE
+   number = 200;
+```
+
+```{sql connection=dbcon}
+select * from course_logs;
+```
+```{sql connection=dbcon}
+select * from course;
+```
+
+
+
+
+
+
+
